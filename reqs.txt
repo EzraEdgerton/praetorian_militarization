@@ -1,0 +1,30 @@
+Year= year for each data entry  
+Cname_year= country & year combination
+Wdi_armedf= number of people in the armed forces
+Wdi_armedfper= percent of workforce that is in the military
+wdi_expmilgdp= military expenditures as % of GDP
+wdi_expmilgexp= military expenditures as % of Government expenditures
+wdi_imparms= value of arms imports
+scf_milexp= total $ of military expenditures
+scf_ExpPerTroop= Expenditures per Troop = total military expenditure averaged per soldier
+scf_Praetorian= Expenditures per Troop divided by GDP per capita
+
+
+
+
+Hi Ezra, one quick update: the militarization collaborator is interested in praetorian militarization = [(military spending in $)/(number of troops)/(GDP/c)].
+
+This is his explanation:
+ 
+There are three steps to creating the variable.
+1)      military spending as a percent of GDP * GDP in constant dollars * conversion from percent to proportion
+2)      Military expenditures divided by number of soldiers (corrected not to divide by zero).
+3)      Expenditures per soldier divided by GDP per capita
+ 
+Operationally:
+1)      COMPUTE scf_milexp=wdi_expmilgdp * wdi_gdpcon*.01
+2)      COMPUTE scf_ExpPerTroop=scf_milexp/(wdi_armedf +1)
+3)      COMPUTE scf_Praetorian=scf_ExpPerTroop/(wdi_gdppccon)
+ 
+There is also a logged version:
+1)      COMPUTE scf_praetorianln=ln(scf_Praetorian)
