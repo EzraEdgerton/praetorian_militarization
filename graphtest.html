@@ -1,0 +1,232 @@
+</!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+	<title>Praetorian Militarization Graphs</title>
+	<!--<link rel="stylesheet" href="ext/css/d3.slider.css"/>  -->
+ <link rel="stylesheet" href="ext/css/bootstrap.min.css"/>  
+  <link rel="stylesheet" href="ext/css/dc.css"/> 
+
+
+</head>
+<body>
+
+<script src="ext/jquery.min.js"></script>
+<script src="ext/d3.js"></script>
+<script src="ext/crossfilter.js"></script>
+<script src="ext/dc.js"></script>
+
+<div id="window">
+</div>
+<div class="row">
+  <div class="col-lg-12">
+  <h1>Praetorian Militarization Statistics</h1>
+</div>
+  <div class="col-lg-12" id="ca-chart"> 
+  <!--  <div id="composite-test">
+    </div>-->
+  </div>
+</div>
+
+<div class="row" style="padding-left: 10px">
+<div class="col-lg-3">
+<div style="height:650px; width:300px; overflow-y: auto">
+<div id='continent-bar-chart'>
+	<h5>Praetorian Militarization by Country</h5>
+</div>
+</div>
+</div>
+
+
+<div class='col-lg-9'>
+  <div class="col-lg-3">
+<div id='bar-chart'>
+  <h5>Praetorian Militarization by Year</h5>
+</div>
+</div>
+  <div class='col-lg-9'>
+    <div id='composite-test'>
+	<h5>Praetorian Militarization </h5>
+</div>
+</div>
+  <div class="col-lg-3">
+    <div id="scf_exppertroop">
+    </div>
+  </div>
+  <div class="col-lg-3">
+     <div id="wdi_armedfper">
+     </div>
+  </div>
+  <div class="col-lg-3">
+     <div id="wdi_exmilgdp">
+     </div>
+  </div>
+  <div class="col-lg-3">
+     <div id="scf_milexp">
+     </div>
+  </div>
+</div>
+</div>
+
+</div>
+<div class="row" style="padding-left: 10px">
+
+</div>
+
+<script>
+
+	var w = 0;
+	var h = 0;
+	var svg  = d3.select('#window')
+					.append("svg")
+					.attr("width", w)
+					.attr("height", h)
+					.attr("id", "svg")
+
+	var parseTimeJson = d3.time.format("%Y");
+
+// Returns if value is a date object
+function isDate (value) {
+return value instanceof Date;
+};
+
+d3.json('praetorian_by_country.json' , function(error, data){
+	if (error) throw error;
+
+
+
+    dstuff = []
+    d_i = 0;
+   // console.log(data['Algeria'])
+   count = 0
+   	for (a in data){
+      //console.log(a)
+      if (count < 10){
+    	country_data = data[a];
+      for (c in country_data){
+        country_element = country_data[c]
+     
+     	  dstuff.push(country_element);
+      } 
+    }
+    count++;
+     }; 
+
+
+
+    
+
+
+    function reduceInitial(){
+      return {
+        scf_Praetorian : 0
+      }
+    }
+
+    function reduceAdd(p, v){
+    //  console.log(v)
+      p.scf_Praetorian = p.scf_Praetorian + v.scf_Praetorian;
+     // p[v.country] =  v.scf_Praetorian;
+      return p;
+    }
+
+    function reduceRemove(p, v){
+      p.scf_Praetorian = p.scf_Praetorian - v.scf_Praetorian;
+      //p[v.country] = 0;
+      return p;
+    }
+
+    var countryBarChart = dc.rowChart("#continent-bar-chart")
+
+    var yearChart = dc.rowChart('#bar-chart')
+
+    var cfdata = crossfilter(dstuff)
+
+    var compositeDim = cfdata.dimension(function(d){
+      return parseTimeJson.parse(d.year);
+    })
+    var countryDim = cfdata.dimension(function(d){
+    	return d.country;
+    })
+
+  var compositeGroup = compositeDim.group().reduce(reduceAdd, reduceRemove, reduceInitial)
+
+   var countryGroup = countryDim.group().reduce(reduceAdd, reduceRemove, reduceInitial)
+
+
+  customcolor = d3.scale.linear().domain([1,21])
+      .interpolate(d3.interpolateHcl)
+      .range([d3.rgb('#9ec3ff'), d3.rgb('#001d4f')]);
+  var linearcolors = []
+
+  for (var i = 0; i < 20; i++){
+    linearcolors.push(customcolor(i))
+  }
+
+
+
+
+  countryBarChart.width(300)
+    .height(800)
+    .margins({top: 5, left: 20, right: 10, bottom: 20})
+    .dimension(countryDim)
+    .group(countryGroup)
+    .label(function (d){
+       return d.key
+    })
+    .valueAccessor(function(p){
+      if(Math.abs(p.value.scf_Praetorian)<1e-6){
+      return 0;
+      }
+      return p.value.scf_Praetorian})
+    .title(function(d){return d.key;})
+    .ordering(function(d){
+      return d.key
+    })
+    .elasticX(true)
+    .xAxis().ticks(4)
+
+
+     yearChart
+     .width(200)
+    .height(300)
+    .margins({top: 5, left: 10, right: 10, bottom: 20})
+    .dimension(compositeDim)
+    .group(compositeGroup)
+    .linearColors(linearcolors)
+    .colorAccessor(function(d){
+      return d.key.getFullYear() - 1990
+    })
+    .label(function (d){
+       return d.key.getFullYear();
+    })
+    .valueAccessor(function(p){
+      if(Math.abs(p.value.scf_Praetorian)<1e-6){
+        return 0;
+      } 
+      return p.value.scf_Praetorian
+    })
+    .title(function(d){return d.value.scf_Praetorian;})
+    .ordering(function(d){
+      return d.key.getFullYear();
+    })
+    .elasticX(true)
+    .xAxis().ticks(4);
+
+
+    countryBarChart.on('postRedraw', function(graph){
+      console.log(cfdata)
+      console.log(dstuff)
+      console.log(graph.dimension().top(Infinity))
+      console.log(graph.group().top(Infinity));
+      console.log(yearChart.group().top(Infinity))
+      console.log(yearChart.dimension().top(Infinity))
+    })
+       dc.renderAll();
+
+});
+
+</script>
+
+</body>
+</html>

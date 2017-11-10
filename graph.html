@@ -1,4 +1,3 @@
-
 </!DOCTYPE html>
 <html>
 <head>
@@ -13,9 +12,10 @@
 <body>
 
 <script src="ext/jquery.min.js"></script>
-<script src="ext/d3.v3.min.js"></script>
+<script src="ext/d3.js"></script>
 <script src="ext/crossfilter.js"></script>
 <script src="ext/dc.js"></script>
+<script src="ext/color-hash.js"></script>
 
 <div id="window">
 </div>
@@ -24,6 +24,8 @@
   <h1>Praetorian Militarization Statistics</h1>
 </div>
   <div class="col-lg-12" id="ca-chart"> 
+  <!--  <div id="composite-test">
+    </div>-->
   </div>
 </div>
 
@@ -35,6 +37,8 @@
 </div>
 </div>
 </div>
+
+
 <div class='col-lg-9'>
   <div class="col-lg-3">
 <div id='bar-chart'>
@@ -42,7 +46,7 @@
 </div>
 </div>
   <div class='col-lg-9'>
-    <div id='line-chart'>
+    <div id='composite-test'>
 	<h5>Praetorian Militarization </h5>
 </div>
 </div>
@@ -62,6 +66,7 @@
      <div id="scf_milexp">
      </div>
   </div>
+</div>
 </div>
 
 </div>
@@ -86,22 +91,40 @@ function isDate (value) {
 return value instanceof Date;
 };
 
+
+var colorHash = new ColorHash();
+
 d3.json('praetorian_by_country.json' , function(error, data){
 	if (error) throw error;
 
 
 
     dstuff = []
-    d_i = 0;
-   	for (a in data){
+    countryColors = []
+    countryColorAccessor = {}
+    keys = []
+    for (key in data){
+      keys.push(key)
+    }
+    keys.sort()
+    len = keys.length
+   count = 0
+   	for (var i = 0; i < len; i++){
+      a = keys[i]
+      countryColors.push(colorHash.hex(a));
+      countryColorAccessor[a] = count
     	country_data = data[a];
       for (c in country_data){
-     	  dstuff.push(country_data[c]);
-      }    
+    
+        country_element = country_data[c]
+     
+     	  dstuff.push(country_element);
+      }  
+      count++
      }; 
 
-    
 
+    
 
     function reduceInitial(){
       return {
@@ -111,17 +134,18 @@ d3.json('praetorian_by_country.json' , function(error, data){
 
     function reduceAdd(p, v){
       p.scf_Praetorian = p.scf_Praetorian + v.scf_Praetorian;
+      p[v.country] =  v.scf_Praetorian;
       return p;
     }
 
     function reduceRemove(p, v){
 
       p.scf_Praetorian = p.scf_Praetorian - v.scf_Praetorian;
+      p[v.country] = 0;
       return p;
     }
 
-
-    var lineChart = dc.lineChart('#line-chart')
+    var compositeChart = dc.compositeChart('#composite-test')
 
     var countryBarChart = dc.rowChart("#continent-bar-chart")
 
@@ -132,15 +156,16 @@ d3.json('praetorian_by_country.json' , function(error, data){
     var wdi_exmilgdp = dc.scatterPlot('#wdi_exmilgdp');
     var scf_milexp = dc.scatterPlot('#scf_milexp')
 
-   /*  var caChart = dc.bubbleOverlay("#ca-chart")
-            .svg(d3.select("#ca-chart svg"));*/
-
     var cfdata = crossfilter(dstuff)
+
+    var compositeDim = cfdata.dimension(function(d){
+      return parseTimeJson.parse(d.year)
+    })
 
     var year = cfdata.dimension(function(d){
     	return parseTimeJson.parse(d.year)
     })
-    var country = cfdata.dimension(function(d){
+    var countryDim = cfdata.dimension(function(d){
     	return d.country;
     })
     var scf_exppertroop_d = cfdata.dimension(function(d){
@@ -163,35 +188,15 @@ d3.json('praetorian_by_country.json' , function(error, data){
     var wdi_expmilgdp_g = wdi_expmilgdp_d.group()
     var scf_milexp_g = scf_milexp_d.group()
 
-    yearGroup = year.group().reduceSum(function(d){
-    	return d.scf_Praetorian
-    })
-
-
     var yearGroup = year.group().reduce(reduceAdd, reduceRemove, reduceInitial)
 
-   // var countryGroup = country.group().reduce(reduceAdd, reduceRemove, reduceInitial).orderNatural()
+    var compositeGroup = compositeDim.group().reduce(reduceAdd, reduceRemove, reduceInitial)
 
-   var countryGroup =country.group().reduceSum(function(d){
+
+   var countryGroup =countryDim.group().reduceSum(function(d){
     return +d.scf_Praetorian
-   })/*.order(function(d){
-    return d.country;
-   })*/
+   })
 
-
-    function snap_to_zero(source_group) {
-    return {
-        all:function () {
-            return source_group.all().map(function(d) {
-                return {key: d.key, 
-                        value: {
-                          scf_Praetorian : (Math.abs(d.value.scf_Praetorian)<1e-6) ? 0 : d.value.scf_Praetorian
-                          }
-                        };
-            });
-        }
-    };
-  }
   customcolor = d3.scale.linear().domain([1,21])
       .interpolate(d3.interpolateHcl)
       .range([d3.rgb('#9ec3ff'), d3.rgb('#001d4f')]);
@@ -199,7 +204,7 @@ d3.json('praetorian_by_country.json' , function(error, data){
   for (var i = 0; i < 20; i++){
     linearcolors.push(customcolor(i))
   }
-
+//FOR FUTURE CHANGES
   /* var symbolScale = d3.scale.ordinal().range(d3.svg.symbolTypes);
   var symbolAccessor = function(d) { return symbolScale(d.value); };
   var subChart = function(c) {
@@ -225,7 +230,7 @@ d3.json('praetorian_by_country.json' , function(error, data){
         })
 
 
-    scf_exppertroop.width(270)
+    scf_exppertroop.width(250)
       .height(330)
       .x(d3.scale.linear().domain(x_extent))
       .y(d3.scale.linear().domain(d3.extent(o_scf_exppertroop,  function(d){
@@ -256,7 +261,7 @@ d3.json('praetorian_by_country.json' , function(error, data){
 
 
 
-    wdi_armedfper.width(270)
+    wdi_armedfper.width(250)
       .height(330)
       .x(d3.scale.linear().domain(x_extent))
       .y(d3.scale.linear().domain(d3.extent(o_wdi_armedfper,  function(d){
@@ -288,7 +293,7 @@ d3.json('praetorian_by_country.json' , function(error, data){
 
 
 
-    scf_milexp.width(270)
+    scf_milexp.width(250)
       .height(330)
       .x(d3.scale.linear().domain(x_extent))
       .y(d3.scale.linear().domain(d3.extent(o_scf_milexp, function(d){
@@ -320,7 +325,7 @@ d3.json('praetorian_by_country.json' , function(error, data){
       scf_milexp.yAxis().tickFormat(d3.format("$"))
       
 
-    wdi_exmilgdp.width(270)
+    wdi_exmilgdp.width(250)
       .height(330)
       .x(d3.scale.linear().domain(x_extent))
       .y(d3.scale.linear().domain(d3.extent(o_graphGroup, function(d){
@@ -435,30 +440,20 @@ d3.json('praetorian_by_country.json' , function(error, data){
       });
 
 
-   
-    console.log(countryGroup.top(Infinity))
-    lineChart
-	.width(700)
-	    .height(300)
-	   .x(d3.time.scale().domain([parseTimeJson.parse('1990'),parseTimeJson.parse('2016')]))
-	    .renderArea(false)
-	    .brushOn(false)
-	    .clipPadding(10)
-	   // .yAxisLabel("Praetorian Militarization")
-	    .dimension(year)
-	    ///.y()
-	    .elasticY(true)
-	    .group(snap_to_zero(yearGroup))
-      .valueAccessor(function(p){return p.value.scf_Praetorian;})
-	    .title(function(d){return d.key;});
+  console.log(countryColors)
 
   countryBarChart.width(300)
-    .height(4500)
+    .height(9000)
     .margins({top: 5, left: 20, right: 10, bottom: 20})
-    .dimension(country)
+    .dimension(countryDim)
     .group(countryGroup)
    //.group(countryGroup)
     //.colors(['steelblue'])
+    .colorAccessor(function(p){
+      console.log(p)
+      return countryColorAccessor[p.key];
+    })
+    .ordinalColors(countryColors)
     .label(function (d){
       //console.log(d.value)
        return d.key
@@ -471,20 +466,124 @@ d3.json('praetorian_by_country.json' , function(error, data){
     .title(function(d){return d.value;})
     .elasticX(true)
     .ordering(function(d){
-      return d.key
+      return d.key;
     })
-    //.x(d3.scale.ordinal())
-    //.xUnits(dc.units.ordinal)
     .xAxis().ticks(4)
 
 
 
+
+    compositeChart.width(700)
+      .height(325)
+      .x(d3.time.scale().domain([parseTimeJson.parse('1990'),parseTimeJson.parse('2016')]))
+      .yAxisLabel("Praetorian Militarization")
+      .xAxisLabel("Year")
+      .brushOn(false)
+      .elasticY(true)
+      .compose([
+        dc.lineChart(compositeChart)
+          .dimension(compositeDim)
+          .group(compositeGroup)
+          .valueAccessor(function(p){
+            if(Math.abs(p.value.scf_Praetorian)<1e-6){
+              return 0;
+            }
+            return p.value.scf_Praetorian
+          })
+          .renderTitle(true)
+          .title(function(p){
+             console.log(p)
+            return p.value.scf_Praetorian;
+          })
+      ])
+
+      .shareTitle(false)
+      .render()
+ 
+    function createCompositeChildren(countries){
+
+      var lineCharts = [];
+
+      if(countries.length > 200){
+        lineCharts = [
+        dc.lineChart(compositeChart)
+          .dimension(compositeDim)
+         // .colors('blue')
+          .group(compositeGroup)
+          .valueAccessor(function(p){
+            if(Math.abs(p.value.scf_Praetorian)<1e-6){
+              return 0;
+            }
+            return p.value.scf_Praetorian
+          }).renderTitle(true)
+          .title(function(p){
+            return p.value.scf_Praetorian;
+          })
+         ]
+        return lineCharts;
+     }
+     else{
+      var selectedCountries = [];
+      cccolors = [];
+      j = cccolors.length -1
+      if (countries.length % 26 != 0){
+        countries.forEach(function(d){
+          inIt = $.inArray(d.country, selectedCountries)
+          if (inIt == -1){
+            selectedCountries.push(d.country)
+            j--;
+          }
+        });
+      }
+      else{
+      for (var i = countries.length - 1; i > -1; i-=26){
+        selectedCountries.push(countries[i].country);
+        j--;
+      }
+    }
+    console.log(selectedCountries)
+     selectedCountries.forEach(function(c){
+        lineCharts.push(
+          dc.lineChart(compositeChart)
+          .dimension(compositeDim)
+          .colors(colorHash.hex(c))
+          .group(compositeGroup)
+          .valueAccessor(function(p){
+              if(Math.abs(p.value[c])<1e-6){
+                   return 0;
+                   };
+              return p.value[c];
+          })          .renderTitle(true)
+          .title(function(p){
+            return c+": "+p.value[c];
+          })
+          );
+     })
+     
+
+
+      //console.log(lineCharts)
+      return lineCharts
+     }
+    };//createCompositeChildren
+
+    yearChart.on('postRedraw', function(graph){
+      console.log(countryBarChart.dimension().top(Infinity))
+
+     var stuff = createCompositeChildren(countryBarChart.dimension().top(Infinity))
+     compositeChart.compose(stuff).render()
+
+     graph.render()
+    })
+
+
+    console.log(linearcolors)
      yearChart
      .width(200)
     .height(300)
     .margins({top: 5, left: 10, right: 10, bottom: 20})
-    .dimension(year)
-    .group(snap_to_zero(yearGroup))
+    .dimension(compositeDim)
+    .group(compositeGroup)
     //.colors(["steelblue"])
     .linearColors(linearcolors)
     .colorAccessor(function(d){
@@ -494,9 +593,15 @@ d3.json('praetorian_by_country.json' , function(error, data){
        return d.key.getFullYear();
     })
     .valueAccessor(function(p){
+      if(Math.abs(p.value.scf_Praetorian)<1e-6){
+        return 0;
+      } 
       return p.value.scf_Praetorian
     })
-    .title(function(d){return d.key;})
+    .title(function(d){return d.value.scf_Praetorian;})
+    .ordering(function(d){
+      return d.key.getFullYear();
+    })
     .elasticX(true)
     .xAxis().ticks(4);
 
