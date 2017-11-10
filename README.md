@@ -13,7 +13,6 @@ Use the country selection pane on the left hand side to select a country and see
 
 TODO:
 
-make line chart multiple lines
 add different symbols for scatterplots
 build worldmap to replace country barchart
 
