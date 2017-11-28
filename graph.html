@@ -16,6 +16,8 @@
 <script src="ext/crossfilter.js"></script>
 <script src="ext/dc.js"></script>
 <script src="ext/color-hash.js"></script>
+<script src="ext/queue.v1.min.js"></script>
+<script src="ext/topojson.js"></script>
 
 <div id="window">
 </div>
@@ -447,15 +449,12 @@ d3.json('praetorian_by_country.json' , function(error, data){
     .margins({top: 5, left: 20, right: 10, bottom: 20})
     .dimension(countryDim)
     .group(countryGroup)
-   //.group(countryGroup)
-    //.colors(['steelblue'])
+
     .colorAccessor(function(p){
-      console.log(p)
       return countryColorAccessor[p.key];
     })
     .ordinalColors(countryColors)
     .label(function (d){
-      //console.log(d.value)
        return d.key
     })
     .valueAccessor(function(p){

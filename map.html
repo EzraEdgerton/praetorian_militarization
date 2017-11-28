@@ -1,0 +1,462 @@
+</!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+	<title>Praetorian Militarization Map</title>
+	<!--<link rel="stylesheet" href="ext/css/d3.slider.css"/>  -->
+ <link rel="stylesheet" href="ext/css/bootstrap.min.css"/>  
+  <link rel="stylesheet" href="ext/css/dc.css"/> 
+<style>
+	.subunit.none{fill: #ddd;}
+	.subunit.group0{fill: #FFD5CC;}
+	.subunit.group1{fill: #FFAA99;}
+	.subunit.group2{fill: #FF7F66;}
+	.subunit.group3{fill: #FF5533;}
+	.subunit.group4{fill: #FF2A00;}
+	.subunit.group5{fill: #CC2200;}
+	.subunit.group6{fill: #991900;}
+	.subunit.group7{fill: #661100;}
+	.subunit.group8{fill: #422924;}
+	.subunit.group9{fill: #38312E;}
+
+	.recta.none{fill: #ddd;}
+	.recta.group0{fill: #FFD5CC;}
+	.recta.group1{fill: #FFAA99;}
+	.recta.group2{fill: #FF7F66;}
+	.recta.group3{fill: #FF5533;}
+	.recta.group4{fill: #FF2A00;}
+	.recta.group5{fill: #CC2200;}
+	.recta.group6{fill: #991900;}
+	.recta.group7{fill: #661100;}
+	.recta.group8{fill: #422924;}
+	.recta.group9{fill: #38312E;}
+
+	.legend rect{
+      stroke: #000;
+    }
+
+    .legend, .legend_title text{
+      font-size:10pt;
+    }
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+</style>
+
+</head>
+<body>
+<script src="ext/jquery.min.js"></script>
+<script src="ext/d3.js"></script>
+<script src="ext/crossfilter.js"></script>
+<script src="ext/dc.js"></script>
+<script src="ext/color-hash.js"></script>
+<script src="ext/queue.v1.min.js"></script>
+<script src="ext/topojson.v1.min.js"></script>
+
+<div class='container-fluid'>
+	<div class="row">
+		<div class="col-lg-12">
+			<h1>Praetorian Militarization Map <span id="ysv">…</span></h1>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-lg-4"><input type="range" min="1990" max="2015" id="ys">
+		</div>
+		<div class="col-lg-1">
+			<div id='fieldSelect'></div>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-lg-9" >
+			<div id="mapdiv"></div>
+		</div>
+		<div class="col-lg-3" >
+			<div id="countryinfodiv"></div>
+		</div>
+	</div>
+</div>
+<script>
+
+
+	var parseTime = d3.time.format("%Y");
+
+
+	
+	var ranges = ['Praetorian', 'Expenditure per troop', '% of workforce in military', 'Military exp as gdp %', 'Military expenditure'];
+	
+	var year = 1990
+
+	var field = 'scf_Praetorian';
+
+	var width = 1000//$(window).width(); 
+	var height = 700//$(window).height();
+	var svg = d3.select('#mapdiv').append('svg')
+						.attr('width', width)
+						.attr('height', height)
+						.attr('id', 'map')
+						.attr('overflow', 'auto')
+
+
+	svg.append("g")
+        .attr("class", "legend");
+    svg.append("g")
+        .attr("class", "legend_title")
+        .append("text");
+
+	d3.json('praetorian_by_country_3c.json', function(error1, praetorian){
+		if (error1) return console.error(error);
+
+			praeReturnDomain = [];
+			exppReturnDomain = [];
+			armedReturnDomain = [];
+			expmilgdpReturnDomain = [];
+			milexpReturnDomain = [];
+			len = praetorian.length
+			for (i in praetorian){
+				for(var j = 0; j < praetorian[i].length; j++){
+					for (k in praetorian[i][j])
+					value1 = praetorian[i][j].scf_Praetorian;
+					value2 = praetorian[i][j].scf_ExpPerTroop;
+					value3 = praetorian[i][j].wdi_armedfper;
+					value4 = praetorian[i][j].wdi_expmilgdp;
+					value5 = praetorian[i][j].scf_milexp;
+					if(value1 != -1){
+					praeReturnDomain.push(praetorian[i][j].scf_Praetorian);
+					}
+					if(value2 != -1){
+					exppReturnDomain.push(praetorian[i][j].scf_ExpPerTroop);
+					}
+					if(value3 != -1){
+					armedReturnDomain.push(praetorian[i][j].wdi_armedfper);
+					}
+					if(value4 != -1){
+					expmilgdpReturnDomain.push(praetorian[i][j].wdi_expmilgdp);
+					}
+					if(value5 != -1){
+					milexpReturnDomain.push(praetorian[i][j].scf_milexp);
+					}
+				}
+			};
+			//create color scales
+			var praeColorScale = d3.scale.quantile().domain(
+			praeReturnDomain).range([0,1,2,3,4,5,6,7,8,9])
+			var exppColorScale = d3.scale.quantile().domain(
+			exppReturnDomain).range([0,1,2,3,4,5,6,7,8,9])
+			var armedColorScale = d3.scale.quantile().domain(
+			armedReturnDomain).range([0,1,2,3,4,5,6,7,8,9])
+			var expmilgdpColorScale = d3.scale.quantile().domain(
+			expmilgdpReturnDomain).range([0,1,2,3,4,5,6,7,8,9])
+			var milexpColorScale = d3.scale.quantile().domain(
+			milexpReturnDomain).range([0,1,2,3,4,5,6,7,8,9])
+
+			var colorscale = praeColorScale;
+
+
+
+		d3.json('world.json', function(error2, d){
+		if (error2) return console.error(error);
+
+			function renderLegend(){
+			 d3.selectAll("svg#map g.legend text")
+			 	.remove()
+				let svg_height = +d3.select("svg#map").attr("height");
+				let legend_items =pairQuantiles(colorscale.quantiles(), colorscale.domain());
+				let legend = d3.select("svg#map g.legend").selectAll("rect")
+               .data(colorscale.range());
+
+               legend.exit().remove();
+
+	               legend.enter()
+	          .append("rect")
+	          .attr("width", "20")
+	          .attr("height", "20")
+	          .attr("y", function(d, i) { return (svg_height-29) - 25*i; })
+	          .attr("x", 30)
+	          .attr("class", function(d, i) { return "recta group" + i; })
+	        
+	         let text = d3.select("svg#map g.legend").selectAll("text");
+
+	        text.data(legend_items)
+	    	.enter().append("text")
+	      	.attr("y", function(d, i) { return (svg_height-14) - 25*i; })
+	      	.attr("x", 60)
+	      	.text(function(d, i) { return d; });
+
+	      	console.log(legend_items)
+
+	        d3.select("svg#map g.legend_title text")
+	        .text("Legend (quintile ranges)")
+	        .attr("x", 30)
+	        .attr("y", height - (25 * legend_items.length) - 20);
+			};
+
+			renderLegend()
+			function returnColor(score){
+				if(score == -1){
+	    				return 'subunit ' + 'none' 
+	    			}
+	    		else{
+	    			return 'subunit group' + colorscale(score) 
+	    		}
+	    			
+			}
+			function getColor(){
+				var countries = d3.selectAll('.subunit')
+
+				countries
+					.attr('class', function(d){
+						if (praetorian[d.properties.name] != undefined){
+	    				var score =  praetorian[d.properties.name][year - 1990][field];
+	    				return returnColor(score)
+	    			}
+	    			return "subunit " + "none";
+					})
+				countries.selectAll("title").text(function(d){
+	    		if (praetorian[d.properties.name] != undefined){
+	    			var score =  praetorian[d.properties.name][year - 1990][field];
+	    			if (score == -1){
+	    				return d.properties.name + ": " + "N/A"
+	    			}
+	    			return d.properties.name + ": " + score
+	    		}
+	    		return d.properties.name + ": " + "N/A"
+	    	})
+
+
+	    
+			}//getColor
+
+
+			var fieldSelect = d3.select('#fieldSelect').append('select')
+				.attr('class', 'select')
+				.attr('id', 'field')
+				.on('change', fieldChange)
+
+			var fieldOptions = fieldSelect.selectAll('option')
+					.data(ranges).enter()
+					.append('option')
+					.text(function(d){return d})
+
+
+			function fieldChange(){
+				range = d3.select('#field').property('value')
+				if (range == 'Praetorian'){
+					colorscale = praeColorScale
+					field = 'scf_Praetorian'
+				}
+				else if(range == 'Expenditure per troop'){
+					colorscale = exppColorScale
+					field = 'scf_ExpPerTroop'
+				}
+				else if(range == '% of workforce in military'){
+					colorscale = armedColorScale
+					field = 'wdi_armedfper'
+				}
+				else if(range == 'Military exp as gdp %'){
+					colorscale = expmilgdpColorScale
+					field = 'wdi_expmilgdp'
+				}
+				else if(range == 'Military expenditure'){
+					colorscale = milexpColorScale
+					field = 'scf_milexp'
+				}
+				getColor();
+				renderLegend();
+			};
+
+
+			//Stuff for year range
+			function update(selectyear){
+				d3.select("#ysv").text(selectyear);
+  				d3.select("#ys").property("value", selectyear);
+  				year = selectyear;
+  				getColor();
+			};
+			d3.select("#ys").on("input", function() {
+  				update(+this.value);
+			});
+
+			update(1990);
+
+		var subunits = topojson.feature(d, d.objects.worldsubunits)
+		var projection = d3.geo.mercator()
+	    		.scale(150)
+	    		.translate([width/2, height * .7])
+
+	   	var path = d3.geo.path()
+	   	 .projection(projection);
+
+	   	 svg.append("path")
+	    .datum(subunits)
+	    .attr("d", path);
+
+	    svg.selectAll('.subunit')
+	    	.data(topojson.feature(d, d.objects.worldsubunits).features)
+	    	.enter()
+	    	.append("path")
+	    	.attr('class', function(d){
+	    		//console.log(d);
+	    		if (praetorian[d.properties.name] != undefined){
+	    			var score =  praetorian[d.properties.name][1990 - year][field];
+	    			return returnColor(score)
+	    		}
+	    		return "subunit " + "none";
+	    	})
+	    	.attr("d", path)
+	    	.on('click', function(d){
+	    		//TODO: CHANGE SELECtION STYLING
+	    		//d3.select(this).style('stroke', 'blue')
+	    		selectSideCountry(d)
+	    	})
+	    	.append("title")
+	    	.text(function(d){
+	    		if (praetorian[d.properties.name] != undefined){
+	    			var score =  praetorian[d.properties.name][1990 - year][field];
+	    			if (score == -1){
+	    				return d.properties.name + ": " + "N/A"
+	    			}
+	    			return d.properties.name + ": " + score
+	    		}
+	    		return d.properties.name + ": " + "N/A"
+	    	})
+
+	    	left_margin = 30 
+	    	top_margin = 30
+	    	graph_height = 250
+	    	graph_width = 200
+	    	d3.select('#countryinfodiv')
+	    		.append('svg')
+	    		.attr('id', 'countryinfo')
+	    		.attr('height', height)
+	    		.attr('width', 300)
+	    	var side = d3.select('#countryinfo')
+	    	side.append('text')
+	    		.attr('x', 20)
+	    		.attr('y', 20)
+	    		.style('font-size', '20px')
+	    		.text('Select a Country')
+	    		.attr('id', 'sidetext')
+
+	    	var graph = side.append('g')
+	    		.attr('id', 'sidegraph')
+
+
+var x = d3.time.scale()
+    .range([0, graph_width]);
+
+var y = d3.scale.linear()
+    .range([graph_height, 0]);
+
+var xAxis = d3.svg.axis().scale(x)
+    .orient("bottom").ticks(5);
+
+var yAxis = d3.svg.axis().scale(y)
+    .orient("left").ticks(5);
+
+var valueline = d3.svg.line()
+	.x(function(d) { return x(parseTime.parse(d.year)); })
+	.y(function(d) { if(d[field] != -1){
+						if (field == 'scf_ExpPerTroop'){
+		return y(d[field]/1000)
+	}
+	if (field == 'scf_milexp'){
+		return y(d[field]/1000000000)
+	}
+						return y(d[field]);}
+					else{return y(0)} });
+
+
+var data = {scf_Praetorian:0,
+			year: 0}
+
+x.domain(d3.extent(data, function(d) { return d.year; }));
+y.domain([0, d3.max(data, function(d) { 
+	if (field == 'scf_ExpPerTroop'){
+		return d[field]/1000
+	}
+	if (field == 'scf_milexp'){
+		return d[field]/1000000000
+	}
+	return d[field]; 
+	})]);
+graph.append("path")
+	.attr('d', valueline(data))
+	.attr('id','line')
+	.style('stroke', 'red')
+	 .attr("transform", "translate(" + left_margin + ',' + top_margin + ")")
+	.style('fill', 'none')
+graph.append("g")
+.attr("class", "x axis")
+.attr("transform", "translate(" + left_margin + ',' + (graph_height + top_margin) + ")")
+.call(xAxis)
+.attr('id', 'xaxis');
+
+graph.append("g")
+	.attr("class", "y axis")
+		 .call(yAxis)
+		 .attr("transform", "translate(" + left_margin + ',' + top_margin + ")")
+		 .attr('id', 'yaxis');
+
+
+	    function selectSideCountry(country_info){
+	    	console.log(field)
+	    		data = praetorian[country_info.properties.name]
+	    		 x.domain(d3.extent(data, function(d) { return parseTime.parse(d.year); }));
+    			 y.domain([0, d3.max(data, function(d) { if (field == 'scf_ExpPerTroop'){
+		return d[field]/1000
+	}
+	if (field == 'scf_milexp'){
+		return d[field]/1000000000
+	}
+	return d[field];  })]);
+    			 graph.select('#line')
+    			 	.attr('d', valueline(data))
+
+    			 graph.select('#xaxis')
+        			.call(xAxis);
+
+        		     graph.select('#yaxis')
+       					 .call(yAxis);
+       			if(field == 'scf_ExpPerTroop'){
+       				d3.select('#sidetext').text(country_info.properties.name + (' (in thousands)'))
+       			}
+       			else if(field == 'scf_milexp'){
+       				d3.select('#sidetext').text(country_info.properties.name + (' (in billions)'))
+       			}
+       			else{
+	    		d3.select('#sidetext').text(country_info.properties.name)}
+	    		d3.select('#sidegraph')
+	    	}	
+
+	    	
+		});//world_fetch
+	});//praetorian_fetch
+
+
+function pairQuantiles(arr, domain) {
+
+	var f = d3.format(".2f");
+	console.log(arr)
+	let new_arr = []
+	for (var i = 0; i < arr.length; i++){
+		if (i == 0){
+			new_arr.push(0 + " – "  + f(arr[i]))
+		}
+		else{
+			new_arr.push(f(arr[i - 1]) + " – " + f(arr[i]))
+		}
+	}
+	new_arr.push(f(arr[arr.length - 1]) + " – " + f(domain[domain.length -1]))
+
+
+  return new_arr;
+}
+	
+</script>
+</body>

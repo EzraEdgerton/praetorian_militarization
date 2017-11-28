@@ -1,0 +1,38 @@
+topojson \
+-o world.json \
+--id-property SU_A3 \
+--properties name=NAME sovereignt=SOVEREIGNT geounit=GEOUNIT \
+-- \
+worldsubunits.json
+
+"SOVEREIGNT"
+
+topojson \
+-o uk.json \
+--id-property SU_A3 \
+--properties name=NAME \
+-- \
+subunits.json \
+places.json
+
+
+topojson \
+-o world.json \
+--id-property SU_A3 \
+--properties co_name=SOVEREIGNT 
+-- \
+worldsubunits.json 
+
+topojson \
+-o world.json \
+--id-property SU_A3 \
+--properties name=NAME \
+-- \
+worldsubunits.json
+
+topojson \
+-o world.json \
+--id-property SU_A3 \
+--properties name=SOVEREIGNT \
+-- \
+worldsubunits.json
